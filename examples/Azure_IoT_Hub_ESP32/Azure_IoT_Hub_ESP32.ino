@@ -82,6 +82,10 @@ static uint32_t telemetry_send_count = 0;
 #define INCOMING_DATA_BUFFER_SIZE 128
 static char incoming_data[INCOMING_DATA_BUFFER_SIZE];
 
+char message_properties_buffer[160];
+az_span property_name1 = AZ_SPAN_FROM_STR("property-name");
+az_span property_value1 = AZ_SPAN_FROM_STR("property-value");
+
 // Auxiliary functions
 
 static AzIoTSasToken sasToken(
@@ -312,11 +316,26 @@ static void sendTelemetry()
 
   Logger.Info("Sending telemetry ...");
 
+  // Preparing custom property to send with telemetry.
+  az_iot_message_properties message_properties;
+  az_span message_properties_span = AZ_SPAN_FROM_BUFFER(message_properties_buffer);
+
+  if (az_result_failed(az_iot_message_properties_init(&message_properties, message_properties_span, 0)))
+  {
+    Logger.Error("Failed initializing message properties.");
+    return;
+  }
+  else if (az_result_failed(az_iot_message_properties_append(&message_properties, property_name1, property_value1)))
+  {
+    Logger.Error("Failed appending message property.");
+    return;
+  }
+
   // The topic could be obtained just once during setup,
   // however if properties are used the topic need to be generated again to reflect the
   // current values of the properties.
   if (az_result_failed(az_iot_hub_client_telemetry_get_publish_topic(
-          &client, NULL, telemetry_topic, sizeof(telemetry_topic), NULL)))
+          &client, &message_properties, telemetry_topic, sizeof(telemetry_topic), NULL)))
   {
     Logger.Error("Failed az_iot_hub_client_telemetry_get_publish_topic");
     return;
