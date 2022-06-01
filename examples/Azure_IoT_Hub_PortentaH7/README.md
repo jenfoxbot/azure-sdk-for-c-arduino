@@ -109,7 +109,7 @@ _NOTE: Device keys are used to automatically generate a SAS token for authentica
 
 1. Install Arduino Mbed OS Portenta board support in the Arduino IDE. [Full instructions can be found here.](https://docs.arduino.cc/software/ide-v1/tutorials/getting-started/cores/arduino-mbed_portenta)
 
-    - Navigate to **Tools > Board > Board Manager**
+    - Navigate to **Tools > Board > Boards Manager**
     - Search for **'Portenta'** and install the **Arduino Mbed OS Portenta Boards** core.
     - Always install the latest version.    
     
@@ -117,7 +117,7 @@ _NOTE: Device keys are used to automatically generate a SAS token for authentica
 
 1. Nagivate to **Tools > Board > Arduino Mbed OS Portenta Boards** and select **'Arduino Portenta H7 (M7 core)'**.
 
-1. In **Tools > Board**, set the flash split to be **'2MB M7 + M4 in SDRAM'**.
+1. In **Tools > Flash split**, set the flash split to be **'2MB M7 + M4 in SDRAM'**.
 
 1. If this is your first time using the Portenta, [follow these instructions to update the WiFi firmware on the Portenta](https://support.arduino.cc/hc/en-us/articles/4403365234322-How-to-update-Wi-Fi-firmware-on-Portenta-H7).
 
@@ -130,13 +130,17 @@ _NOTE: Device keys are used to automatically generate a SAS token for authentica
         2. Use the Arduino CLI. 
 
     - This tutorial will use the CLI approach because it is faster and easier to describe. 
-    - In the Arduino CLI, type and run the following command to install the NTP Client :
+    - Using the Arduino CLI, type and run the following command to install the NTP Client :
 
-    ``` arduino-cli lib install --no-deps NTPClient_Generic ```
+    ```
+    arduino-cli lib install --no-deps NTPClient_Generic
+    ```
 
     - Since we're already in the Arduino CLI, let's install remaining libraries (can also install these from Library Manager):
 
-    ``` arduino-cli lib install "Azure SDK for C" ArduinoBearSSL Time ArduinoMqttClient```
+    ``` 
+    arduino-cli lib install "Azure SDK for C" ArduinoBearSSL Time ArduinoMqttClient
+    ```
 
 1. You may need to restart the Arduino IDE for changes to show up.
 
@@ -186,6 +190,8 @@ _NOTE: Device keys are used to automatically generate a SAS token for authentica
     <p>
 
     ```text
+    Sketch uses 400756 bytes (20%) of program storage space. Maximum is 1966080 bytes.
+    Global variables use 93992 bytes (17%) of dynamic memory, leaving 429632 bytes for local variables. Maximum is 523624 bytes.
     dfu-util 0.10-dev
 
     Copyright 2005-2009 Weston Schmidt, Harald Welte and OpenMoko Inc.

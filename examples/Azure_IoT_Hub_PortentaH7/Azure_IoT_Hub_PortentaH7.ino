@@ -27,12 +27,19 @@
 // Sample header
 #include "iot_configs.h"
 
+#define BUFFER_LENGTH 256
+#define BUFFER_LENGTH_SIGNATURE 512
+#define BUFFER_LENGTH_SIGNED_SIGNATURE 64
+#define BUFFER_LENGTH_MQTT_TOPIC 128
+#define BUFFER_LENGTH_MQTT_PASSWORD 256
+#define BUFFER_LENGTH_MQTT_CLIENT_ID 256
+#define BUFFER_LENGTH_MQTT_USERNAME 512
+
 #define LED_PIN 2 // High on error. Briefly high for each successful send.
 
 // Time and Time Zone
 #define GMT_OFFSET_SECS (IOT_CONFIG_TIME_ZONE * SECS_PER_HOUR)
 #define GMT_OFFSET_SECS_DST ((IOT_CONFIG_TIME_ZONE + IOT_CONFIG_TIME_ZONE_DAYLIGHT_SAVINGS_DIFF) * SECS_PER_HOUR)
-#define SECS_PER_MIN 60
 
 // Logging
 enum LogLevel 
@@ -53,7 +60,7 @@ static WiFiUDP wiFiUDPClient;
 static NTPClient ntpClient(wiFiUDPClient, "pool.ntp.org", GMT_OFFSET_SECS_DST);
 static WiFiClient wiFiClient;
 static BearSSLClient bearSSLClient(wiFiClient);
-static MqttClient mqtt_client(bearSSLClient);
+static MqttClient mqttClient(bearSSLClient);
 static az_iot_hub_client azIoTHubClient;
 
 static char mqttClientId[BUFFER_LENGTH_MQTT_CLIENT_ID];
@@ -63,12 +70,11 @@ static char telemetryTopic[BUFFER_LENGTH_MQTT_TOPIC];
 static unsigned long telemetryNextSendTimeMs;
 static String telemetryPayload;
 static uint32_t telemetrySendCount;
-static uint64_t sasTokenDuration;
 
 // Functions
+void connectToWiFi();
 void initializeAzureIoTClient();
 void initializeMQTTClient();
-void connectToWiFi();
 void connectTMQTTClientToAzureIoTHub();
 
 void onMessageReceived(int messageSize);
@@ -76,11 +82,11 @@ static void sendTelemetry();
 static char* generateTelemetry();
 
 static void generateMQTTPassword();
-static uint64_t getSASTokenExpirationTime(uint32_t minutes);
 static void generateSASBase64EncodedSignedSignature(
     uint8_t const* sasSignature, size_t const sasSignatureSize,
     uint8_t* encodedSignedSignature, size_t encodedSignedSignatureSize,
     size_t* encodedSignedSignatureLength);
+static uint64_t getSASTokenExpirationTime(uint32_t minutes);
 static String getFormattedDateTime(unsigned long epochTimeInSeconds);
 static String mqttErrorCodeName(int errorCode);
 
@@ -92,12 +98,9 @@ void setup()
 
   digitalWrite(LED_PIN, HIGH);
 
-  // Initialize
+  connectToWiFi();
   initializeAzureIoTHubClient();
   initializeMQTTClient();
-
-  // Connect
-  connectToWiFi();
   connectTMQTTClientToAzureIoTHub();
 
   digitalWrite(LED_PIN, LOW);
@@ -123,9 +126,35 @@ void loop()
   }
 
   // MQTT loop must be called to process Telemetry and Cloud-to-Device (C2D) messages.
-  mqtt_client.poll();
+  mqttClient.poll();
   ntpClient.update();
   delay(500);
+}
+
+void connectToWiFi()
+{
+  logString = "Attempting to connect to WIFI SSID: ";
+  LogInfo(logString + IOT_CONFIG_WIFI_SSID);
+
+  while (WiFi.begin(IOT_CONFIG_WIFI_SSID, IOT_CONFIG_WIFI_PASSWORD) != WL_CONNECTED) 
+  {
+    Serial.println(".");
+    delay(IOT_CONFIG_WIFI_CONNECT_RETRY_MS);
+  }
+  Serial.println();
+
+  logString = "WiFi connected, IP address: ";
+  LogInfo(logString + WiFi.localIP() + ", Strength (dBm): " + WiFi.RSSI());
+  LogInfo("Syncing time.");
+
+  ntpClient.begin();
+  while (!ntpClient.forceUpdate()) 
+  {
+    Serial.print(".");
+  }
+  Serial.println();
+
+  LogInfo("Time synced!");
 }
 
 void initializeAzureIoTHubClient() 
@@ -189,32 +218,6 @@ void initializeMQTTClient()
   LogInfo(logString + mqttPassword);
 
   LogInfo("MQTT client initialized.");
-}
-
-void connectToWiFi()
-{
-  logString = "Attempting to connect to WIFI SSID: ";
-  LogInfo(logString + IOT_CONFIG_WIFI_SSID);
-
-  while (WiFi.begin(IOT_CONFIG_WIFI_SSID, IOT_CONFIG_WIFI_PASSWORD) != WL_CONNECTED) 
-  {
-    Serial.println(".");
-    delay(IOT_CONFIG_WIFI_CONNECT_RETRY_MS);
-  }
-  Serial.println();
-
-  logString = "WiFi connected, IP address: ";
-  LogInfo(logString + WiFi.localIP() + ", Strength (dBm): " + WiFi.RSSI());
-  LogInfo("Syncing time.");
-
-  ntpClient.begin();
-  while (!ntpClient.forceUpdate()) 
-  {
-    Serial.print(".");
-  }
-  Serial.println();
-
-  LogInfo("Time synced!");
 }
 
 void connectTMQTTClientToAzureIoTHub() 
@@ -364,6 +367,19 @@ static void generateSASBase64EncodedSignedSignature(
     LogError(logString + rc);
     exit(rc);
   }
+}
+
+static uint64_t getSASTokenExpirationTime(uint32_t minutes) 
+{
+  unsigned long now = ntpClient.getUTCEpochTime();
+  unsigned long expiryTime = now + (SECS_PER_MIN* minutes);
+
+  logString = "Current time: ";
+  LogInfo(logString + getFormattedDateTime(now) + " (epoch: " + now + " secs)");
+  logString = "Expiry time: ";
+  LogInfo(logString + getFormattedDateTime(expiryTime) + " (epoch: " + expiryTime + " secs)");
+
+  return (uint64_t)expiryTime;
 }
 
 static String getFormattedDateTime(unsigned long epochTimeInSeconds) 
