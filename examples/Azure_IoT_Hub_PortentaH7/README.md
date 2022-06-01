@@ -110,7 +110,7 @@ _NOTE: Device keys are used to automatically generate a SAS token for authentica
 1. Install Arduino Mbed OS Portenta board support in the Arduino IDE. [Full instructions can be found here.](https://docs.arduino.cc/software/ide-v1/tutorials/getting-started/cores/arduino-mbed_portenta)
 
     - Navigate to **Tools > Board > Board Manager**
-    - Search for 'Portenta' and install the **Arduino Mbed OS Portenta Boards** core.
+    - Search for **'Portenta'** and install the **Arduino Mbed OS Portenta Boards** core.
     - Always install the latest version.    
     
     *Note: This process may take several minutes.*  
@@ -166,6 +166,8 @@ _NOTE: Device keys are used to automatically generate a SAS token for authentica
     - Change the `IOT_CONFIG_TIME_ZONE` value to reflect the number of hours to add or subtract from the GMT timezone for your timezone.
     - Why is this necessary? 
         - Our sample generates a temporary SAS token that is valid for 1 hour. If your device clock is off from your local timezone, the SAS token may appear to be expired and IoT Hub will refuse the device connection (it will timeout).
+
+        > NOTE: You can change the expiration time in *'iot_configs.h'* by updating the `IOT_CONFIG_SAS_TOKEN_EXPIRY_MINUTES` variable.
 
 1. Connect the Arduino Portenta to your USB port.
 
