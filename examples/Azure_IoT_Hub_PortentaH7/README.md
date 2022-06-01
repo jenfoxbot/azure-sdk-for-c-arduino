@@ -18,7 +18,7 @@ products:
   - [Introduction](#introduction)
     - [What is Covered](#what-is-covered)
   - [Prerequisites](#prerequisites)
-  - [IoT Hub Setup](#iot-hub-setup)
+  - [IoT Hub Device Setup](#iot-hub-device-setup)
   - [Arduino IDE Setup](#arduino-ide-setup)
   - [Run the Sample](#run-the-sample)
   - [Troubleshooting](#troubleshooting)
@@ -74,8 +74,12 @@ _The following was run on Windows 11 and WSL Ubuntu Desktop 20.04 environments, 
 
   NOTE: This guide demonstrates use of the Azure CLI and does NOT demonstrate use of Azure IoT Explorer.
 
-## IoT Hub Setup
+## IoT Hub Device Setup
 1. In the Azure portal, navigate to your IoT Hub resource.
+
+1. On the left side menu, click on **'Overview'**. We will need the following information from this page:
+
+    - Hostname
 
 1. On the left side menu under **Device management**, click on **'Devices'**.
 
@@ -83,7 +87,7 @@ _The following was run on Windows 11 and WSL Ubuntu Desktop 20.04 environments, 
 
 1. Give your device a unique name.
 
-1. Select 'Symmetric key', 'Auto-Generate keys', and 'Enable' for Connecting the device to an IoT Hub, then click 'Save'.
+1. Select **'Symmetric key'**, **'Auto-generate keys'**, and **'Enable'** for Connecting the device to an IoT Hub, then click **'Save'**.
 
 1. When the device has been created, select its name under 'Device ID'.
 
@@ -91,7 +95,6 @@ _The following was run on Windows 11 and WSL Ubuntu Desktop 20.04 environments, 
 
     - Device ID
     - Primary Key
-    - HostName (under Primary Connection String)
 
 _NOTE: Device keys are used to automatically generate a SAS token for authentication, which is only valid for one hour._
 
@@ -99,7 +102,12 @@ _NOTE: Device keys are used to automatically generate a SAS token for authentica
 
 1. Open the Arduino IDE.
 
-1. Install Mbed OS Portenta board support in the Arduino IDE. [Full instructions can be found here.](https://docs.arduino.cc/software/ide-v1/tutorials/getting-started/cores/arduino-mbed_portenta)
+1. Install the Azure SDK for Embedded C library.
+
+    - Navigate to **Tools > Manage Libraries**.
+    - Search for the **'azure-sdk-for-c'** library. Install the latest version.
+
+1. Install Arduino Mbed OS Portenta board support in the Arduino IDE. [Full instructions can be found here.](https://docs.arduino.cc/software/ide-v1/tutorials/getting-started/cores/arduino-mbed_portenta)
 
     - Navigate to **Tools > Board > Board Manager**
     - Search for 'Portenta' and install the **Arduino Mbed OS Portenta Boards** core.
@@ -142,20 +150,20 @@ _NOTE: Device keys are used to automatically generate a SAS token for authentica
 
 1. Navigate to the '*iot_configs.h*' file
 
-1. In the *iot_configs.h* file, fill in your credentials. 
+1. In the '*iot_configs.h*' file, fill in your credentials. 
 
     - Add in your WiFi SSID and password.
-    - Paste your IoT Hub device HostName for the *'IOT_CONFIG_IOTHUB_FQDN'* variable. It should look something like:
+    - Paste your IoT Hub device HostName for the `IOT_CONFIG_IOTHUB_FQDN` variable. It should look something like:
 
         ```#define IOT_CONFIG_IOTHUB_FQDN "my-resource-group.azure-devices.net"```
 
-    - Paste your IoT Hub device ID for the *'IOT_CONFIG_DEVICE_ID'* variable.
+    - Paste your IoT Hub device ID for the `IOT_CONFIG_DEVICE_ID` variable.
 
-    - Finally, paste your IoT Hub Primary Key for the *'IOT_CONFIG_DEVICE_KEY'* variable.
+    - Finally, paste your IoT Hub Primary Key for the `IOT_CONFIG_DEVICE_KEY` variable.
 
 1. This sample was configured for a PST timezone (GMT -8hrs) with a Daylight Savings offset. If you live in a different timezone, update the values in '*Time Zone Offset*' at the bottom of the *iot_configs.h* file.
 
-    - Change the '*IOT_CONFIG_TIME_ZONE*' value to reflect the number of hours to add or subtract from the GMT timezone for your timezone.
+    - Change the `IOT_CONFIG_TIME_ZONE` value to reflect the number of hours to add or subtract from the GMT timezone for your timezone.
     - Why is this necessary? 
         - Our sample generates a temporary SAS token that is valid for 1 hour. If your device clock is off from your local timezone, the SAS token may appear to be expired and IoT Hub will refuse the device connection (it will timeout).
 
@@ -163,50 +171,53 @@ _NOTE: Device keys are used to automatically generate a SAS token for authentica
 
 1. On the Arduino IDE, select the port.
 
-    - Go to menu `Tools`, `Port` and select the port to which the Portenta is connected.
+    - Navigate to **Tools > Port**.
+    - Select the port to which the Portenta is connected.
 
-8. Upload the sketch. Note that this may take a few minutes.
+1. Upload the sketch.
 
-    - Go to menu `Sketch` and click on `Upload`.
+    - Navigate to **Sketch > Upload**.
 
-        <details><summary><i>Expected output of the upload:</i></summary>
-        <p>
+    *Note: This will take several minutes.* 
 
-        ```text
-            dfu-util 0.10-dev
+    <details><summary><i>Expected output of the upload:</i></summary>
+    <p>
 
-            Copyright 2005-2009 Weston Schmidt, Harald Welte and OpenMoko Inc.
-            Copyright 2010-2021 Tormod Volden and Stefan Schmidt
-            This program is Free Software and has ABSOLUTELY NO WARRANTY
-            Please report bugs to http://sourceforge.net/p/dfu-util/tickets/
+    ```text
+    dfu-util 0.10-dev
 
-            Opening DFU capable USB device...
-            Device ID 2341:035b
-            Device DFU version 011a
-            Claiming USB DFU Interface...
-            Setting Alternate Interface #0 ...
-            Determining device status...
-            DFU state(2) = dfuIDLE, status(0) = No error condition is present
-            DFU mode device DFU version 011a
-            Device returned transfer size 4096
-            DfuSe interface name: "Internal Flash   "
-            Downloading element to address = 0x08040000, size = 405660
-            Erase   	[=========================] 100%       405660 bytes
-            Erase    done.
-            Download	[======================== ]  96%       393216 bytesWarning: Invalid DFU suffix signature
-            A valid DFU suffix will be required in a future dfu-util release
-            Download	[=========================] 100%       405660 bytes
-            Download done.
-            File downloaded successfully
-            Transitioning to dfuMANIFEST state
-        ```
-        
-        </p>
-        </details>
+    Copyright 2005-2009 Weston Schmidt, Harald Welte and OpenMoko Inc.
+    Copyright 2010-2021 Tormod Volden and Stefan Schmidt
+    This program is Free Software and has ABSOLUTELY NO WARRANTY
+    Please report bugs to http://sourceforge.net/p/dfu-util/tickets/
 
-9. While the sketch is uploading, open the Serial Monitor to monitor the MCU (microcontroller) locally via the Serial Port.
+    Opening DFU capable USB device...
+    Device ID 2341:035b
+    Device DFU version 011a
+    Claiming USB DFU Interface...
+    Setting Alternate Interface #0 ...
+    Determining device status...
+    DFU state(2) = dfuIDLE, status(0) = No error condition is present
+    DFU mode device DFU version 011a
+    Device returned transfer size 4096
+    DfuSe interface name: "Internal Flash   "
+    Downloading element to address = 0x08040000, size = 405660
+    Erase   	[=========================] 100%       405660 bytes
+    Erase    done.
+    Download	[======================== ]  96%       393216 bytesWarning: Invalid DFU suffix signature
+    A valid DFU suffix will be required in a future dfu-util release
+    Download	[=========================] 100%       405660 bytes
+    Download done.
+    File downloaded successfully
+    Transitioning to dfuMANIFEST state
+    ```
+    
+    </p>
+    </details>
 
-    - Go to menu `Tools`, `Serial Monitor`.
+1. While the sketch is uploading, open the Serial Monitor to monitor the MCU (microcontroller) locally via the Serial Port.
+
+    - Navigate to **Tools > Serial Monitor**.
 
         If you perform this step right away after uploading the sketch, the serial monitor will show an output similar to the following upon success:
 
@@ -231,7 +242,7 @@ _NOTE: Device keys are used to automatically generate a SAS token for authentica
         13:41:20.782 -> OK
         ```
 
-10. Monitor the telemetry messages sent to the Azure IoT Hub using the connection string for the policy name `iothubowner` found under "Shared access policies" on your IoT Hub in the Azure portal.
+1. Monitor the telemetry messages sent to the Azure IoT Hub using the connection string for the policy name `iothubowner` found under "Shared access policies" on your IoT Hub in the Azure portal.
 
     ```bash
     $ az iot hub monitor-events --login <your Azure IoT Hub owner connection string in quotes> --device-id <your device id>
@@ -301,7 +312,7 @@ _NOTE: Device keys are used to automatically generate a SAS token for authentica
 
 The Azure IoT service certificates presented during TLS negotiation shall be always validated, on the device, using the appropriate trusted root CA certificate(s).
 
-For the Arduino Portenta H7 sample, our function `createCert()` automatically downloads the root certificate used in the United States regions (Baltimore CA certificate) and adds it to the Arduino sketch project..
+The Azure SDK for C Arduino library automatically installs the root certificate used in the United States regions, and adds it to the Arduino sketch project when the library is included.
 
 For other regions (and private cloud environments), please use the appropriate root CA certificate.
 
