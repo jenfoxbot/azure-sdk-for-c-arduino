@@ -74,7 +74,7 @@ static uint32_t telemetrySendCount;
 void connectToWiFi();
 void initializeAzureIoTClient();
 void initializeMQTTClient();
-void connectTMQTTClientToAzureIoTHub();
+void connectMQTTClientToAzureIoTHub();
 
 void onMessageReceived(int messageSize);
 static void sendTelemetry();
@@ -101,7 +101,7 @@ void setup()
   connectToWiFi();
   initializeAzureIoTHubClient();
   initializeMQTTClient();
-  connectTMQTTClientToAzureIoTHub();
+  connectMQTTClientToAzureIoTHub();
 
   digitalWrite(LED_PIN, LOW);
 }
@@ -119,7 +119,7 @@ void loop()
     // Check for MQTT Client connection to Azure IoT Hub. Reconnect if needed.
     if (!mqttClient.connected())
     {
-      connectTMQTTClientToAzureIoTHub();
+      connectMQTTClientToAzureIoTHub();
     }
     
     sendTelemetry();
@@ -220,7 +220,7 @@ void initializeMQTTClient()
   LogInfo("MQTT client initialized.");
 }
 
-void connectTMQTTClientToAzureIoTHub() 
+void connectMQTTClientToAzureIoTHub() 
 {
   LogInfo("Connecting to Azure IoT Hub.");
 
