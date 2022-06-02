@@ -247,11 +247,13 @@ void onMessageReceived(int messageSize)
 {
   logString = "Message received: Topic: ";
   LogInfo(logString + mqttClient.messageTopic() + ", Length: " + messageSize);
+  LogInfo("Message: ");
 
   while (mqttClient.available()) 
   {
-    LogInfo("Message: " + mqttClient.read());
+    Serial.print((char)mqttClient.read());
   }
+  Serial.println();
 }
 
 static void sendTelemetry()
