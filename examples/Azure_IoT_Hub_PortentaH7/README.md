@@ -72,7 +72,7 @@ _The following was run on Windows 11 and WSL Ubuntu Desktop 20.04 environments, 
 
   - **Optional**: The most recent version of [Azure IoT Explorer](https://github.com/Azure/azure-iot-explorer/releases) installed. More instruction on its usage can be found [here](https://docs.microsoft.com/azure/iot-pnp/howto-use-iot-explorer).
 
-  NOTE: This guide demonstrates use of the Azure CLI and does NOT demonstrate use of Azure IoT Explorer.
+  *NOTE: This guide demonstrates use of the Azure CLI and does NOT demonstrate use of Azure IoT Explorer.*
 
 ## IoT Hub Device Setup
 1. In the Azure portal, navigate to your IoT Hub resource.
