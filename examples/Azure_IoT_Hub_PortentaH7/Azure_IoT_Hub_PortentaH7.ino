@@ -8,17 +8,15 @@
 #include <ctime>
 
 // Libraries for NTP, SSL client, MQTT client, WiFi connection and SAS-token generation.
-#include <Arduino.h>
 #include <ArduinoBearSSL.h>
 #include <ArduinoMqttClient.h>
 #include <NTPClient_Generic.h>
-#include <SPI.h>
 #include <TimeLib.h>
 #include <WiFi.h>
 #include <mbed.h>
 #include <mbedtls/base64.h>
-#include <mbedtls/sha256.h>
 #include <mbedtls/md.h>
+#include <mbedtls/sha256.h>
 
 // Azure IoT SDK for C includes
 #include <az_core.h>
@@ -27,17 +25,18 @@
 // Sample header
 #include "iot_configs.h"
 
-#define BUFFER_LENGTH 256
-#define BUFFER_LENGTH_SIGNATURE 512
-#define BUFFER_LENGTH_SIGNED_SIGNATURE 64
 #define BUFFER_LENGTH_MQTT_TOPIC 128
 #define BUFFER_LENGTH_MQTT_PASSWORD 256
 #define BUFFER_LENGTH_MQTT_CLIENT_ID 256
 #define BUFFER_LENGTH_MQTT_USERNAME 512
+#define BUFFER_LENGTH_SAS 32
+#define BUFFER_LENGTH_SAS_SIGNATURE 512
+#define BUFFER_LENGTH_SAS_ENCODED_SIGNED_SIGNATURE 64
+#define BUFFER_LENGTH_TIME 256
 
 #define LED_PIN 2 // High on error. Briefly high for each successful send.
 
-// Time and Time Zone
+// Time and Time Zone for NTP
 #define GMT_OFFSET_SECS (IOT_CONFIG_TIME_ZONE * SECS_PER_HOUR)
 #define GMT_OFFSET_SECS_DST ((IOT_CONFIG_TIME_ZONE + IOT_CONFIG_TIME_ZONE_DAYLIGHT_SAVINGS_DIFF) * SECS_PER_HOUR)
 
@@ -117,12 +116,13 @@ void loop()
   // Telemetry
   if (millis() > telemetryNextSendTimeMs)
   {
-      // Check for MQTT Client connection to Azure IoT Hub. Reconnect if needed.
-      if (!mqttClient.connected())
-      {
-          connectTMQTTClientToAzureIoTHub();
-      }
-      sendTelemetry();
+    // Check for MQTT Client connection to Azure IoT Hub. Reconnect if needed.
+    if (!mqttClient.connected())
+    {
+      connectTMQTTClientToAzureIoTHub();
+    }
+    
+    sendTelemetry();
     telemetryNextSendTimeMs = millis() + IOT_CONFIG_TELEMETRY_FREQUENCY_MS;
   }
 
@@ -162,14 +162,13 @@ void initializeAzureIoTHubClient()
 {
   LogInfo("Initializing Azure IoT Hub client.");
 
-  int rc;
   az_span hostname = AZ_SPAN_FROM_STR(IOT_CONFIG_IOTHUB_FQDN);
   az_span deviceId = AZ_SPAN_FROM_STR(IOT_CONFIG_DEVICE_ID);
 
   az_iot_hub_client_options options = az_iot_hub_client_options_default();
   options.user_agent = AZ_SPAN_FROM_STR(IOT_CONFIG_AZURE_SDK_CLIENT_USER_AGENT);
 
-  rc = az_iot_hub_client_init(&azIoTHubClient, hostname, deviceId, &options);
+  int rc = az_iot_hub_client_init(&azIoTHubClient, hostname, deviceId, &options);
   if (az_result_failed(rc)) 
   {
     logString = "Failed to initialize Azure IoT Hub client. Return code: ";
@@ -225,7 +224,7 @@ void connectTMQTTClientToAzureIoTHub()
 {
   LogInfo("Connecting to Azure IoT Hub.");
 
-  // Set a callback to get the current time used to validate the servers certificate.
+  // Set a callback to get the current time used to validate the server certificate.
   ArduinoBearSSL.onGetTime(getTime);
 
   while (!mqttClient.connect(IOT_CONFIG_IOTHUB_FQDN, AZ_IOT_DEFAULT_MQTT_CONNECT_PORT)) 
@@ -292,10 +291,10 @@ static void generateMQTTPassword()
   int rc;
 
   uint64_t sasTokenDuration = 0;
-  uint8_t signature[BUFFER_LENGTH_SIGNATURE] = {0};
+  uint8_t signature[BUFFER_LENGTH_SAS_SIGNATURE] = {0};
   az_span signatureAzSpan = AZ_SPAN_FROM_BUFFER(signature);
-  uint8_t signedSignature[BUFFER_LENGTH_SIGNED_SIGNATURE] = {0};
-  size_t signedSignatureLength = 0;
+  uint8_t encodedSignedSignature[BUFFER_LENGTH_SAS_ENCODED_SIGNED_SIGNATURE] = {0};
+  size_t encodedSignedSignatureLength = 0;
 
   // Get the signature. It will be signed later with the decoded device key.
   // To change the sas token duration, see IOT_CONFIG_SAS_TOKEN_EXPIRY_MINUTES in iot_configs.h
@@ -313,12 +312,13 @@ static void generateMQTTPassword()
   // Uses the decoded device key.
   generateSASBase64EncodedSignedSignature(
       az_span_ptr(signatureAzSpan), az_span_size(signatureAzSpan),
-      signedSignature, sizeof(signedSignature), &signedSignatureLength);
+      encodedSignedSignature, sizeof(encodedSignedSignature), &encodedSignedSignatureLength);
 
   // Get the resulting MQTT password (SAS Token) from the base64 encoded, HMAC signed bytes.
-  az_span signedSignatureAzSpan = az_span_create(signedSignature, signedSignatureLength);
+  az_span encodedSignedSignatureAzSpan = az_span_create(encodedSignedSignature, 
+                                                        encodedSignedSignatureLength);
   rc = az_iot_hub_client_sas_get_password(
-      &azIoTHubClient, sasTokenDuration, signedSignatureAzSpan, AZ_SPAN_EMPTY,
+      &azIoTHubClient, sasTokenDuration, encodedSignedSignatureAzSpan, AZ_SPAN_EMPTY,
       mqttPassword, sizeof(mqttPassword), NULL);
   if (az_result_failed(rc)) 
   {
@@ -334,9 +334,9 @@ static void generateSASBase64EncodedSignedSignature(
     size_t* encodedSignedSignatureLength) 
 {
   int rc;
-  unsigned char sasDecodedKey[32] = {0};
+  unsigned char sasDecodedKey[BUFFER_LENGTH_SAS] = {0};
   size_t sasDecodedKeyLength = 0;
-  unsigned char sasHMAC256SignedSignature[32] = {0};
+  unsigned char sasHMAC256SignedSignature[BUFFER_LENGTH_SAS] = {0};
   mbedtls_md_context_t ctx;
   mbedtls_md_type_t md_type = MBEDTLS_MD_SHA256;
 
@@ -388,7 +388,7 @@ static uint64_t getSASTokenExpirationTime(uint32_t minutes)
 
 static String getFormattedDateTime(unsigned long epochTimeInSeconds) 
 {
-  char buffer[BUFFER_LENGTH];
+  char buffer[BUFFER_LENGTH_TIME];
 
   time_t time = (time_t)epochTimeInSeconds;
   struct tm* timeInfo = localtime(&time);
