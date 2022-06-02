@@ -189,8 +189,8 @@ _NOTE: Device keys are used to automatically generate a SAS token for authentica
       <p>
 
       ```text
-      Sketch uses 400756 bytes (20%) of program storage space. Maximum is 1966080 bytes.
-      Global variables use 93992 bytes (17%) of dynamic memory, leaving 429632 bytes for local variables. Maximum is 523624 bytes.
+      Sketch uses 398116 bytes (20%) of program storage space. Maximum is 1966080 bytes.
+      Global variables use 92104 bytes (17%) of dynamic memory, leaving 431520 bytes for local variables. Maximum is 523624 bytes.
       dfu-util 0.10-dev
 
       Copyright 2005-2009 Weston Schmidt, Harald Welte and OpenMoko Inc.
@@ -208,12 +208,10 @@ _NOTE: Device keys are used to automatically generate a SAS token for authentica
       DFU mode device DFU version 011a
       Device returned transfer size 4096
       DfuSe interface name: "Internal Flash   "
-      Downloading element to address = 0x08040000, size = 405660
-      Erase   	[=========================] 100%       405660 bytes
+      Downloading element to address = 0x08040000, size = 403188
+      Erase   	[=========================] 100%       403188 bytes
       Erase    done.
-      Download	[======================== ]  96%       393216 bytesWarning: Invalid DFU suffix signature
-      A valid DFU suffix will be required in a future dfu-util release
-      Download	[=========================] 100%       405660 bytes
+      Download	[=========================] 100%       403188 bytes
       Download done.
       File downloaded successfully
       Transitioning to dfuMANIFEST state
@@ -229,24 +227,32 @@ _NOTE: Device keys are used to automatically generate a SAS token for authentica
         If you perform this step right away after uploading the sketch, the serial monitor will show an output similar to the following upon success:
 
         ```text
-        13:41:04.735 -> 2106-02-06T23:28:18 [INFO] Attempting to connect to WIFI SSID: SSID_Name
-        13:41:13.451 -> 
-        13:41:13.451 -> WiFi connected, IP address: 192.168.1.11, Strength (dBm): -54
-        13:41:13.451 -> Syncing time
-        13:41:13.960 -> 2022-04-25T13:41:13 [INFO] Time synced!
-        13:41:13.960 -> Initializing MQTT client
-        13:41:13.960 -> 2022-04-25T13:41:13 [ERROR] MQTT client initialized
-        13:41:13.960 -> 2022-04-25T13:41:13 [INFO] Current time: 2022-04-25T13:41:13 (epoch: 1650919273 secs)
-        13:41:13.960 -> 2022-04-25T13:41:13 [INFO] Expiry time: 2022-04-25T13:41:13 (epoch: 1650922873 secs)
-        13:41:13.960 -> 2022-04-25T13:41:13 [INFO] connect_to_azure_iot_hub - Broker: my-resource-group.azure-devices.net
-        13:41:13.960 -> 2022-04-25T13:41:13 [INFO] connect_to_azure_iot_hub - Client ID: DEVICEID
-        13:41:13.960 -> 2022-04-25T13:41:13 [INFO] connect_to_azure_iot_hub - Username: my-resource-group.azure-devices.net/deviceid/?api-version=2020-09-30&c/1.3.0-beta.1(ard;portentaH7)
-        13:41:13.960 -> 2022-04-25T13:41:13 [INFO] connect_to_azure_iot_hub - SAS Token: SharedAccessSignature sr=my-resource-group.azure-devices.net%2Fdevices%2FDEVICEID&sig=YwqMeeTu245yGlQd3uApd7VkwZkkRtFGF%3DhtFKb3%5XMn%5S&se=1650922873
-        13:41:17.494 -> 2022-04-25T13:41:17 [INFO] You're connected to the MQTT broker
-        13:41:17.903 -> 2022-04-25T13:41:17 [INFO] Arduino Portenta H7 sending telemetry . . . 
-        13:41:18.074 -> OK
-        13:41:20.576 -> 2022-04-25T13:41:20 [INFO] Arduino Portenta H7 sending telemetry . . . 
-        13:41:20.782 -> OK
+        1970-01-01T00:00:35 [INFO] Attempting to connect to WIFI SSID: Moyeeaee
+        .
+
+        1970-01-01T00:01:16 [INFO] WiFi connected, IP address: 2001774784, Strength (dBm): -27
+        1970-01-01T00:01:16 [INFO] Syncing time.
+
+        2022-06-02T20:38:06 [INFO] Time synced!
+        2022-06-02T20:38:06 [INFO] Initializing Azure IoT Hub client.
+        2022-06-02T20:38:06 [INFO] Azure IoT Hub hostname: my-fave2-iothub.azure-devices.net
+        2022-06-02T20:38:06 [INFO] Azure IoT Hub client initialized.
+        2022-06-02T20:38:06 [INFO] Initializing MQTT client.
+        2022-06-02T20:38:06 [INFO] Current time: 2022-06-02T20:38:06 (epoch: 1654202286 secs)
+        2022-06-02T20:38:06 [INFO] Expiry time: 2022-06-02T21:38:06 (epoch: 1654205886 secs)
+        2022-06-02T20:38:06 [INFO] MQTT Client ID: <device id>
+        2022-06-02T20:38:06 [INFO] MQTT Username: <hostname>/<device id>/?api-version=2020-09-30&DeviceClientType=c/1.3.1(ard;portentaH7)
+        2022-06-02T20:38:06 [INFO] MQTT Password (SAS Token): ***
+        2022-06-02T20:38:06 [INFO] MQTT client initialized.
+        2022-06-02T20:38:06 [INFO] Connecting to Azure IoT Hub.
+        2022-06-02T20:38:09 [INFO] Connected to your Azure IoT Hub!
+        2022-06-02T20:38:09 [INFO] Subscribed to MQTT topic: devices/+/messages/devicebound/#
+        2022-06-02T20:38:09 [INFO] Arduino Portenta H7 sending telemetry . . . 
+        2022-06-02T20:38:09 [INFO] Telemetry sent.
+        2022-06-02T20:38:11 [INFO] Arduino Portenta H7 sending telemetry . . . 
+        2022-06-02T20:38:11 [INFO] Telemetry sent.
+        2022-06-02T20:38:14 [INFO] Arduino Portenta H7 sending telemetry . . . 
+        2022-06-02T20:38:14 [INFO] Telemetry sent.
         ```
 
 1. Monitor the telemetry messages sent to the Azure IoT Hub.

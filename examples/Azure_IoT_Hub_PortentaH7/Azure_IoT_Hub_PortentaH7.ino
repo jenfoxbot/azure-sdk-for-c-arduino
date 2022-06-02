@@ -215,7 +215,7 @@ void initializeMQTTClient()
   logString = "MQTT Username: ";
   LogInfo(logString + mqttUsername);
   logString = "MQTT Password (SAS Token): ";
-  LogInfo("***");
+  LogInfo(logString + "***");
 
   LogInfo("MQTT client initialized.");
 }

@@ -13,7 +13,7 @@
 
 // When developing for your own Arduino-based platform,
 // please follow the format '(ard;<platform>)'.
-#define IOT_CONFIG_AZURE_SDK_CLIENT_USER_AGENT "c/" AZ_SDK_VERSION_STRING "(ard;nanorp2040connect)"
+#define IOT_CONFIG_AZURE_SDK_CLIENT_USER_AGENT "c/" AZ_SDK_VERSION_STRING "(ard;portentaH7)"
 
 // Publish 1 message every 2 seconds
 #define IOT_CONFIG_TELEMETRY_FREQUENCY_MS 2000
