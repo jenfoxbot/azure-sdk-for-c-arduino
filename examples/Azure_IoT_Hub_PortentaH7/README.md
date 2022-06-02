@@ -235,7 +235,7 @@ _NOTE: Device keys are used to automatically generate a SAS token for authentica
 
         2022-06-02T20:38:06 [INFO] Time synced!
         2022-06-02T20:38:06 [INFO] Initializing Azure IoT Hub client.
-        2022-06-02T20:38:06 [INFO] Azure IoT Hub hostname: my-fave2-iothub.azure-devices.net
+        2022-06-02T20:38:06 [INFO] Azure IoT Hub hostname: <hostname>
         2022-06-02T20:38:06 [INFO] Azure IoT Hub client initialized.
         2022-06-02T20:38:06 [INFO] Initializing MQTT client.
         2022-06-02T20:38:06 [INFO] Current time: 2022-06-02T20:38:06 (epoch: 1654202286 secs)
