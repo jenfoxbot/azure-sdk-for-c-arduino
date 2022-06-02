@@ -88,6 +88,7 @@ static void generateSASBase64EncodedSignedSignature(
     size_t* encodedSignedSignatureLength);
 static uint64_t getSASTokenExpirationTime(uint32_t minutes);
 static String getFormattedDateTime(unsigned long epochTimeInSeconds);
+static unsigned long getTime();
 static String mqttErrorCodeName(int errorCode);
 
 void setup()
@@ -223,6 +224,9 @@ void initializeMQTTClient()
 void connectTMQTTClientToAzureIoTHub() 
 {
   LogInfo("Connecting to Azure IoT Hub.");
+
+  // Set a callback to get the current time used to validate the servers certificate.
+  ArduinoBearSSL.onGetTime(getTime);
 
   while (!mqttClient.connect(IOT_CONFIG_IOTHUB_FQDN, AZ_IOT_DEFAULT_MQTT_CONNECT_PORT)) 
   {
@@ -371,7 +375,7 @@ static void generateSASBase64EncodedSignedSignature(
 
 static uint64_t getSASTokenExpirationTime(uint32_t minutes) 
 {
-  unsigned long now = ntpClient.getUTCEpochTime();
+  unsigned long now = getTime();
   unsigned long expiryTime = now + (SECS_PER_MIN* minutes);
 
   logString = "Current time: ";
@@ -392,6 +396,11 @@ static String getFormattedDateTime(unsigned long epochTimeInSeconds)
   strftime(buffer, 20, "%FT%T", timeInfo);
 
   return String(buffer);
+}
+
+static unsigned long getTime()
+{
+    return ntpClient.getUTCEpochTime();
 }
 
 static String mqttErrorCodeName(int errorCode) 
@@ -433,7 +442,7 @@ static String mqttErrorCodeName(int errorCode)
 
 static void log(LogLevel logLevel, String message) 
 {
-  Serial.print(getFormattedDateTime(WiFi.getTime()));
+  Serial.print(getFormattedDateTime(getTime()));
 
   switch (logLevel) {
   case LogLevelDebug:
