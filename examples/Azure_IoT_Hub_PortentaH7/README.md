@@ -105,15 +105,16 @@ _NOTE: Device keys are used to automatically generate a SAS token for authentica
 1. Install the Azure SDK for Embedded C library.
 
     - Navigate to **Tools > Manage Libraries**.
-    - Search for the **'azure-sdk-for-c'** library. Install the latest version.
+    - Search for the **'azure-sdk-for-c'** library.
+    - Install the latest version.
 
 1. Install Arduino Mbed OS Portenta board support in the Arduino IDE. [Full instructions can be found here.](https://docs.arduino.cc/software/ide-v1/tutorials/getting-started/cores/arduino-mbed_portenta)
 
     - Navigate to **Tools > Board > Boards Manager**
     - Search for **'Portenta'** and install the **Arduino Mbed OS Portenta Boards** core.
-    - Always install the latest version.    
+    - Install the latest version.    
     
-    *Note: This process may take several minutes.*  
+      *Note: This process may take several minutes.*  
 
 1. Nagivate to **Tools > Board > Arduino Mbed OS Portenta Boards** and select **'Arduino Portenta H7 (M7 core)'**.
 
@@ -132,15 +133,15 @@ _NOTE: Device keys are used to automatically generate a SAS token for authentica
     - This tutorial will use the CLI approach because it is faster and easier to describe. 
     - Using the Arduino CLI, type and run the following command to install the NTP Client :
 
-    ```
-    arduino-cli lib install --no-deps NTPClient_Generic
-    ```
+      ```
+      arduino-cli lib install --no-deps NTPClient_Generic
+      ```
 
     - Since we're already in the Arduino CLI, let's install remaining libraries (can also install these from Library Manager):
 
-    ``` 
-    arduino-cli lib install "Azure SDK for C" ArduinoBearSSL Time ArduinoMqttClient
-    ```
+      ``` 
+      arduino-cli lib install "Azure SDK for C" ArduinoBearSSL Time ArduinoMqttClient
+      ```
 
 1. You may need to restart the Arduino IDE for changes to show up.
 
@@ -171,8 +172,6 @@ _NOTE: Device keys are used to automatically generate a SAS token for authentica
     - Why is this necessary? 
         - Our sample generates a temporary SAS token that is valid for 1 hour. If your device clock is off from your local timezone, the SAS token may appear to be expired and IoT Hub will refuse the device connection (it will timeout).
 
-        > NOTE: You can change the expiration time in *'iot_configs.h'* by updating the `IOT_CONFIG_SAS_TOKEN_EXPIRY_MINUTES` variable.
-
 1. Connect the Arduino Portenta to your USB port.
 
 1. On the Arduino IDE, select the port.
@@ -184,44 +183,44 @@ _NOTE: Device keys are used to automatically generate a SAS token for authentica
 
     - Navigate to **Sketch > Upload**.
 
-    *Note: This will take several minutes.* 
+      *Note: This process may take several minutes.* 
 
-    <details><summary><i>Expected output of the upload:</i></summary>
-    <p>
+      <details><summary><i>Expected output of the upload:</i></summary>
+      <p>
 
-    ```text
-    Sketch uses 400756 bytes (20%) of program storage space. Maximum is 1966080 bytes.
-    Global variables use 93992 bytes (17%) of dynamic memory, leaving 429632 bytes for local variables. Maximum is 523624 bytes.
-    dfu-util 0.10-dev
+      ```text
+      Sketch uses 400756 bytes (20%) of program storage space. Maximum is 1966080 bytes.
+      Global variables use 93992 bytes (17%) of dynamic memory, leaving 429632 bytes for local variables. Maximum is 523624 bytes.
+      dfu-util 0.10-dev
 
-    Copyright 2005-2009 Weston Schmidt, Harald Welte and OpenMoko Inc.
-    Copyright 2010-2021 Tormod Volden and Stefan Schmidt
-    This program is Free Software and has ABSOLUTELY NO WARRANTY
-    Please report bugs to http://sourceforge.net/p/dfu-util/tickets/
+      Copyright 2005-2009 Weston Schmidt, Harald Welte and OpenMoko Inc.
+      Copyright 2010-2021 Tormod Volden and Stefan Schmidt
+      This program is Free Software and has ABSOLUTELY NO WARRANTY
+      Please report bugs to http://sourceforge.net/p/dfu-util/tickets/
 
-    Opening DFU capable USB device...
-    Device ID 2341:035b
-    Device DFU version 011a
-    Claiming USB DFU Interface...
-    Setting Alternate Interface #0 ...
-    Determining device status...
-    DFU state(2) = dfuIDLE, status(0) = No error condition is present
-    DFU mode device DFU version 011a
-    Device returned transfer size 4096
-    DfuSe interface name: "Internal Flash   "
-    Downloading element to address = 0x08040000, size = 405660
-    Erase   	[=========================] 100%       405660 bytes
-    Erase    done.
-    Download	[======================== ]  96%       393216 bytesWarning: Invalid DFU suffix signature
-    A valid DFU suffix will be required in a future dfu-util release
-    Download	[=========================] 100%       405660 bytes
-    Download done.
-    File downloaded successfully
-    Transitioning to dfuMANIFEST state
-    ```
-    
-    </p>
-    </details>
+      Opening DFU capable USB device...
+      Device ID 2341:035b
+      Device DFU version 011a
+      Claiming USB DFU Interface...
+      Setting Alternate Interface #0 ...
+      Determining device status...
+      DFU state(2) = dfuIDLE, status(0) = No error condition is present
+      DFU mode device DFU version 011a
+      Device returned transfer size 4096
+      DfuSe interface name: "Internal Flash   "
+      Downloading element to address = 0x08040000, size = 405660
+      Erase   	[=========================] 100%       405660 bytes
+      Erase    done.
+      Download	[======================== ]  96%       393216 bytesWarning: Invalid DFU suffix signature
+      A valid DFU suffix will be required in a future dfu-util release
+      Download	[=========================] 100%       405660 bytes
+      Download done.
+      File downloaded successfully
+      Transitioning to dfuMANIFEST state
+      ```
+      
+      </p>
+      </details>
 
 1. While the sketch is uploading, open the Serial Monitor to monitor the MCU (microcontroller) locally via the Serial Port.
 
@@ -250,58 +249,54 @@ _NOTE: Device keys are used to automatically generate a SAS token for authentica
         13:41:20.782 -> OK
         ```
 
-1. Monitor the telemetry messages sent to the Azure IoT Hub using the connection string for the policy name `iothubowner` found under "Shared access policies" on your IoT Hub in the Azure portal.
+1. Monitor the telemetry messages sent to the Azure IoT Hub.
 
-    ```bash
-    $ az iot hub monitor-events --login <your Azure IoT Hub owner connection string in quotes> --device-id <your device id>
-    ```
+    - On the left side menu under **Security settings**, click on **'Shared access policies'**.
+    - Under **Manage shared acess policies** and **Policy Name**, Select **'iothubowner'**
+    - Copy the **'Primary connection string'**.  
+    - Using the Azure CLI, type and run the following command, inserting your Primary connection string and Device ID.
 
-    <details><summary><i>Expected telemetry output:</i></summary>
-    <p>
+      ```
+      az iot hub monitor-events --login "<Primary connection string in quotes>" --device-id <device id>
+      ```
 
-    ```bash
-    Starting event monitor, filtering on device: mydeviceid, use ctrl-c to stop...
-    {
-        "event": {
-            "origin": "mydeviceid",
-            "payload": "payload"
-        }
-    }
-    {
-        "event": {
-            "origin": "mydeviceid",
-            "payload": "payload"
-        }
-    }
-    {
-        "event": {
-            "origin": "mydeviceid",
-            "payload": "payload"
-        }
-    }
-    {
-        "event": {
-            "origin": "mydeviceid",
-            "payload": "payload"
-        }
-    }
-    {
-        "event": {
-            "origin": "mydeviceid",
-            "payload": "payload"
-        }
-    }
-    {
-        "event": {
-            "origin": "mydeviceid",
-            "payload": "payload"
-        }
-    }
-    ^CStopping event monitor...
-    ```
+      <details><summary><i>Expected telemetry output:</i></summary>
+      <p>
 
-    </p>
-    </details>
+      ```text
+      Starting event monitor, filtering on device: <device id>, use ctrl-c to stop...
+      {
+          "event": {
+              "origin": "<device id>",
+              "module": "",
+              "interface": "",
+              "component": "",
+              "payload": "<payload>"
+          }
+      }
+      {
+          "event": {
+              "origin": "<device id>",
+              "module": "",
+              "interface": "",
+              "component": "",
+              "payload": "<payload>"
+          }
+      }
+      {
+          "event": {
+              "origin": "<device id>",
+              "module": "",
+              "interface": "",
+              "component": "",
+              "payload": "<payload>"
+          }
+      }
+      ^CStopping event monitor...
+      ```
+
+      </p>
+      </details>
 
 ## Troubleshooting
 1. Both the WiFi SSID and password are case sensitive.
