@@ -1,30 +1,34 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-// C99 libraries
+/*--- Libraries ---*/
+// C99 libraries.
 #include <cstdbool>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
 
-// Libraries for NTP, SSL client, MQTT client, WiFi connection and SAS-token generation.
+// Libraries for SSL client, MQTT client, NTP, and WiFi connection.
 #include <ArduinoBearSSL.h>
 #include <ArduinoMqttClient.h>
 #include <NTPClient_Generic.h>
 #include <TimeLib.h>
 #include <WiFi.h>
+
+// Libraries for SAS token generation.
 #include <mbed.h>
 #include <mbedtls/base64.h>
 #include <mbedtls/md.h>
 #include <mbedtls/sha256.h>
 
-// Azure IoT SDK for C includes
+// Azure IoT SDK for C includes.
 #include <az_core.h>
 #include <az_iot.h>
 
-// Sample header
+// Sample header.
 #include "iot_configs.h"
 
+/*--- Macros ---*/
 #define BUFFER_LENGTH_MQTT_CLIENT_ID 256
 #define BUFFER_LENGTH_MQTT_PASSWORD 256
 #define BUFFER_LENGTH_MQTT_TOPIC 128
@@ -36,11 +40,11 @@
 
 #define LED_PIN 2 // High on error. Briefly high for each successful send.
 
-// Time and Time Zone for NTP
+// Time and Time Zone for NTP.
 #define GMT_OFFSET_SECS (IOT_CONFIG_TIME_ZONE * SECS_PER_HOUR)
 #define GMT_OFFSET_SECS_DST ((IOT_CONFIG_TIME_ZONE + IOT_CONFIG_TIME_ZONE_DAYLIGHT_SAVINGS_DIFF) * SECS_PER_HOUR)
 
-// Logging
+/*--- Logging ---*/
 enum LogLevel 
 { 
   LogLevelDebug, 
@@ -54,7 +58,8 @@ static void log(LogLevel logLevel, String message);
 #define LogInfo(message) log(LogLevelInfo, message)
 #define LogError(message) log(LogLevelError, message)
 
-// Sample static variables
+/*--- Sample static variables --*/
+// Clients for NTP, WiFi connection, SSL, MQTT, and Azure IoT SDK for C.
 static WiFiUDP wiFiUDPClient;
 static NTPClient ntpClient(wiFiUDPClient, "pool.ntp.org", GMT_OFFSET_SECS_DST);
 static WiFiClient wiFiClient;
@@ -62,34 +67,51 @@ static BearSSLClient bearSSLClient(wiFiClient);
 static MqttClient mqttClient(bearSSLClient);
 static az_iot_hub_client azIoTHubClient;
 
+// MQTT variables.
 static char mqttClientId[BUFFER_LENGTH_MQTT_CLIENT_ID];
 static char mqttUsername[BUFFER_LENGTH_MQTT_USERNAME];
 static char mqttPassword[BUFFER_LENGTH_MQTT_PASSWORD];
+
+// Telemetry variables.
 static char telemetryTopic[BUFFER_LENGTH_MQTT_TOPIC];
 static unsigned long telemetryNextSendTimeMs;
 static String telemetryPayload;
 static uint32_t telemetrySendCount;
 
-// Functions
+/*--- Functions ---*/
+// Initialization and connection functions.
 void connectToWiFi();
 void initializeAzureIoTClient();
 void initializeMQTTClient();
 void connectMQTTClientToAzureIoTHub();
 
+// Telemetry and message-callback functions.
 void onMessageReceived(int messageSize);
 static void sendTelemetry();
 static char* generateTelemetry();
 
+// SAS Token related functions.
 static void generateMQTTPassword();
 static void generateSASBase64EncodedSignedSignature(
     uint8_t const* sasSignature, size_t const sasSignatureSize,
     uint8_t* encodedSignedSignature, size_t encodedSignedSignatureSize,
     size_t* encodedSignedSignatureLength);
 static uint64_t getSASTokenExpirationTime(uint32_t minutes);
+
+// Time and Error functions.
 static String getFormattedDateTime(unsigned long epochTimeInSeconds);
 static unsigned long getTime();
 static String mqttErrorCodeName(int errorCode);
 
+/*---------------------------*/
+/*    Main code execution    */
+/*---------------------------*/
+
+/*
+ * setup:
+ * Initialization and connection of serial communication, WiFi client, Azure IoT SDK for C client, 
+ * and MQTT client.
+ */
 void setup()
 {
   while (!Serial);
@@ -106,6 +128,11 @@ void setup()
   digitalWrite(LED_PIN, LOW);
 }
 
+/*
+ * loop:
+ * Check for connection and reconnect if necessary.
+ * Send Telemetry and receive messages.
+ */
 void loop()
 {
   if (WiFi.status() != WL_CONNECTED)
@@ -132,6 +159,15 @@ void loop()
   delay(500);
 }
 
+/*-----------------------------------------------*/
+/*    Initialization and connection functions    */
+/*-----------------------------------------------*/
+
+/*
+ * connectToWifi:
+ * The WiFi client connects, using the provided SSID and password.
+ * The NTP client synchronizes the time on the device. 
+ */
 void connectToWiFi()
 {
   logString = "Attempting to connect to WIFI SSID: ";
@@ -152,12 +188,17 @@ void connectToWiFi()
   while (!ntpClient.forceUpdate()) 
   {
     Serial.print(".");
+    delay(500);
   }
   Serial.println();
 
   LogInfo("Time synced!");
 }
 
+/*
+ * initializeAzureIoTHubClient:
+ * The Azure IoT SDK for C client uses the provided hostname, device id, and user agent.
+ */
 void initializeAzureIoTHubClient() 
 {
   LogInfo("Initializing Azure IoT Hub client.");
@@ -168,12 +209,12 @@ void initializeAzureIoTHubClient()
   az_iot_hub_client_options options = az_iot_hub_client_options_default();
   options.user_agent = AZ_SPAN_FROM_STR(IOT_CONFIG_AZURE_SDK_CLIENT_USER_AGENT);
 
-  int rc = az_iot_hub_client_init(&azIoTHubClient, hostname, deviceId, &options);
-  if (az_result_failed(rc)) 
+  int result = az_iot_hub_client_init(&azIoTHubClient, hostname, deviceId, &options);
+  if (az_result_failed(result)) 
   {
     logString = "Failed to initialize Azure IoT Hub client. Return code: ";
-    LogError(logString + rc);
-    exit(rc);
+    LogError(logString + result);
+    exit(result);
   }
 
   logString = "Azure IoT Hub hostname: ";
@@ -181,27 +222,34 @@ void initializeAzureIoTHubClient()
   LogInfo("Azure IoT Hub client initialized.");
 }
 
+/*
+ * initializeMQTTClient:
+ * The MQTT client uses the client id and username from the Azure IoT SDK for C client.
+ * The MQTT client uses the generated password (the SAS token).
+ */
 void initializeMQTTClient() 
 {
 
   LogInfo("Initializing MQTT client.");
   
-  int rc;
+  int result;
 
-  rc = az_iot_hub_client_get_client_id(&azIoTHubClient, mqttClientId, sizeof(mqttClientId), NULL);
-  if (az_result_failed(rc)) 
+  result = az_iot_hub_client_get_client_id(
+      &azIoTHubClient, mqttClientId, sizeof(mqttClientId), NULL);
+  if (az_result_failed(result)) 
   {
     logString = "Failed to get MQTT client ID. Return code: ";
-    LogError(logString + rc);
-    exit(rc);
+    LogError(logString + result);
+    exit(result);
   }
   
-  rc = az_iot_hub_client_get_user_name(&azIoTHubClient, mqttUsername, sizeof(mqttUsername), NULL);
-  if (az_result_failed(rc)) 
+  result = az_iot_hub_client_get_user_name(
+      &azIoTHubClient, mqttUsername, sizeof(mqttUsername), NULL);
+  if (az_result_failed(result)) 
   {
     logString = "Failed to get MQTT username. Return code: ";
-    LogError(logString + rc);
-    exit(rc);
+    LogError(logString + result);
+    exit(result);
   }
 
   generateMQTTPassword(); // SAS Token
@@ -220,6 +268,12 @@ void initializeMQTTClient()
   LogInfo("MQTT client initialized.");
 }
 
+/*
+ * connectMQTTClientToAzureIoTHub:
+ * The SSL library sets a callback to validate the server certificate.
+ * The MQTT client connects to the provided hostname. The port is pre-set.
+ * The MQTT client subscribes to the Cloud to Device (C2D) topic to receive messages.
+ */
 void connectMQTTClientToAzureIoTHub() 
 {
   LogInfo("Connecting to Azure IoT Hub.");
@@ -243,6 +297,16 @@ void connectMQTTClientToAzureIoTHub()
   LogInfo(logString + AZ_IOT_HUB_CLIENT_C2D_SUBSCRIBE_TOPIC);
 }
 
+/*------------------------------------------------*/
+/*    Telemetry and message-callback functions    */
+/*------------------------------------------------*/
+
+/*
+ * onMessageReceived:
+ * The function called when device receives a message on the subscribed C2D topic.
+ * Callback function signature is defined by the ArduinoMQTTClient library.
+ * Message received is printed to the terminal.
+ */
 void onMessageReceived(int messageSize) 
 {
   logString = "Message received: Topic: ";
@@ -256,18 +320,23 @@ void onMessageReceived(int messageSize)
   Serial.println();
 }
 
+/*
+ * sendTelemetry:
+ * The Azure IoT SDK for C client creates the MQTT topic to publish a telemetry message.
+ * The MQTT client creates and sends the telemetry mesage on the topic.
+ */
 static void sendTelemetry()
 {
   digitalWrite(LED_PIN, HIGH);
   LogInfo("Arduino Portenta H7 sending telemetry . . . ");
 
-  int rc = az_iot_hub_client_telemetry_get_publish_topic(&azIoTHubClient, NULL, telemetryTopic, 
-                                                     sizeof(telemetryTopic), NULL);
-  if (az_result_failed(rc)) 
+  int result = az_iot_hub_client_telemetry_get_publish_topic(
+      &azIoTHubClient, NULL, telemetryTopic, sizeof(telemetryTopic), NULL);
+  if (az_result_failed(result)) 
   {
     logString = "Failed to get telemetry publish topic. Return code: ";
-    LogError(logString + rc);
-    exit(rc);
+    LogError(logString + result);
+    exit(result);
   }
 
   mqttClient.beginMessage(telemetryTopic);
@@ -279,6 +348,12 @@ static void sendTelemetry()
   digitalWrite(LED_PIN, LOW);
 }
 
+/*
+ * generateTelemetry:
+ * Simulated telemetry.  
+ * In your application, this function should retrieve real telemetry data from the device and format
+ * it as needed.
+ */
 static char* generateTelemetry() 
 {
   String payloadStart = "{ \"msgCount\": ";
@@ -288,9 +363,22 @@ static char* generateTelemetry()
   return (char*)telemetryPayload.c_str();
 }
 
+/*************************************/
+/*    SAS Token related functions    */
+/*************************************/
+
+/*
+ * generateMQTTPassword:
+ * The MQTT password is the generated SAS token. The process is:
+ *    1. Get the SAS token expiration time from the provided value. (Default 60 minutes).
+ *    2. Azure IoT SDK for C creates the SAS signature from this expiration time.
+ *    3. Sign and encode the SAS signature.
+ *    4. Azure IoT SDK for C creates the MQTT Password from the expiration time and the encoded,
+ *       signed SAS signature.
+ */
 static void generateMQTTPassword() 
 {
-  int rc;
+  int result;
 
   uint64_t sasTokenDuration = 0;
   uint8_t signature[BUFFER_LENGTH_SAS_SIGNATURE] = {0};
@@ -301,16 +389,16 @@ static void generateMQTTPassword()
   // Get the signature. It will be signed later with the decoded device key.
   // To change the sas token duration, see IOT_CONFIG_SAS_TOKEN_EXPIRY_MINUTES in iot_configs.h
   sasTokenDuration = getSASTokenExpirationTime(IOT_CONFIG_SAS_TOKEN_EXPIRY_MINUTES);
-  rc = az_iot_hub_client_sas_get_signature(&azIoTHubClient, sasTokenDuration, 
-                                           signatureAzSpan, &signatureAzSpan);
-  if (az_result_failed(rc)) 
+  result = az_iot_hub_client_sas_get_signature(
+      &azIoTHubClient, sasTokenDuration, signatureAzSpan, &signatureAzSpan);
+  if (az_result_failed(result)) 
   {
     logString = "Could not get the signature for SAS Token. Return code: ";
-    LogError(logString + rc);
-    exit(rc);
+    LogError(logString + result);
+    exit(result);
   }
 
-  // Generate the encoded, signed signature (b64 encoded, HMAC-SHA256 signing).
+  // Sign and encode the signature (b64 encoded, HMAC-SHA256 signing).
   // Uses the decoded device key.
   generateSASBase64EncodedSignedSignature(
       az_span_ptr(signatureAzSpan), az_span_size(signatureAzSpan),
@@ -319,23 +407,31 @@ static void generateMQTTPassword()
   // Get the resulting MQTT password (SAS Token) from the base64 encoded, HMAC signed bytes.
   az_span encodedSignedSignatureAzSpan = az_span_create(encodedSignedSignature, 
                                                         encodedSignedSignatureLength);
-  rc = az_iot_hub_client_sas_get_password(
+  result = az_iot_hub_client_sas_get_password(
       &azIoTHubClient, sasTokenDuration, encodedSignedSignatureAzSpan, AZ_SPAN_EMPTY,
       mqttPassword, sizeof(mqttPassword), NULL);
-  if (az_result_failed(rc)) 
+  if (az_result_failed(result)) 
   {
     logString = "Could not get the MQTT password. Return code: ";
-    LogError(logString + rc);
+    LogError(logString + result);
     exit(rc);
   }
 }
 
+/*
+ * generateSASBase64EncodedSignedSignature:
+ * Sign and encode a signature. It is signed using the provided device key.
+ * The process is:
+ *    1. Decode the encoded device key.
+ *    2. Sign the signature with the decoded device key.
+ *    3. Encode the signed signature.
+ */
 static void generateSASBase64EncodedSignedSignature(
     uint8_t const* sasSignature, size_t const sasSignatureSize,
     uint8_t* encodedSignedSignature, size_t encodedSignedSignatureSize,
     size_t* encodedSignedSignatureLength) 
 {
-  int rc;
+  int result;
   unsigned char sasDecodedKey[BUFFER_LENGTH_SAS] = {0};
   size_t sasDecodedKeyLength = 0;
   unsigned char sasHMAC256SignedSignature[BUFFER_LENGTH_SAS] = {0};
@@ -343,15 +439,14 @@ static void generateSASBase64EncodedSignedSignature(
   mbedtls_md_type_t md_type = MBEDTLS_MD_SHA256;
 
   // Decode the SAS base64 encoded device key to use for HMAC signing.
-  rc = mbedtls_base64_decode(sasDecodedKey, sizeof(sasDecodedKey),
-                             &sasDecodedKeyLength,
-                             (const unsigned char*)IOT_CONFIG_DEVICE_KEY,
-                             sizeof(IOT_CONFIG_DEVICE_KEY) - 1);  // Do not include the ending '\0'
-  if (rc != 0) 
+  result = mbedtls_base64_decode(
+      sasDecodedKey, sizeof(sasDecodedKey), &sasDecodedKeyLength,
+      (const unsigned char*)IOT_CONFIG_DEVICE_KEY, sizeof(IOT_CONFIG_DEVICE_KEY) - 1);
+  if (result != 0) 
   {
     logString = "mbedtls_base64_decode failed. Return code: ";
-    LogError(logString + rc);
-    exit(rc);
+    LogError(logString + result);
+    exit(result);
   }
 
   // HMAC-SHA256 sign the signature with the decoded device key.
@@ -363,18 +458,21 @@ static void generateSASBase64EncodedSignedSignature(
   mbedtls_md_free(&ctx);
 
   // Base64 encode the result of the HMAC signing.
-  rc = mbedtls_base64_encode(encodedSignedSignature, encodedSignedSignatureSize,
-                             encodedSignedSignatureLength,
-                             sasHMAC256SignedSignature,
-                             sizeof(sasHMAC256SignedSignature));
-  if (rc != 0) 
+  result = mbedtls_base64_encode(
+      encodedSignedSignature, encodedSignedSignatureSize, encodedSignedSignatureLength,
+      sasHMAC256SignedSignature, sizeof(sasHMAC256SignedSignature));
+  if (result != 0) 
   {
     logString = "mbedtls_base64_encode failed. Return code: ";
-    LogError(logString + rc);
-    exit(rc);
+    LogError(logString + result);
+    exit(result);
   }
 }
 
+/*
+ * getSASTokenExpirationTime:
+ * Calculate expiration time from current time and duration value.
+ */
 static uint64_t getSASTokenExpirationTime(uint32_t minutes) 
 {
   unsigned long now = getTime();
@@ -388,6 +486,14 @@ static uint64_t getSASTokenExpirationTime(uint32_t minutes)
   return (uint64_t)expiryTime;
 }
 
+/**********************************/
+/*    Time and Error functions    */
+/**********************************/
+
+/*
+ * getFormattedDateTime:
+ * Provides legible time from provided value.
+ */
 static String getFormattedDateTime(unsigned long epochTimeInSeconds) 
 {
   char buffer[BUFFER_LENGTH_TIME];
@@ -400,11 +506,20 @@ static String getFormattedDateTime(unsigned long epochTimeInSeconds)
   return String(buffer);
 }
 
+/*
+ * getTime:
+ * NTP client returns the current time.
+ * This function also used as a callback by the SSL library to validate the server certificate.
+ */
 static unsigned long getTime()
 {
     return ntpClient.getUTCEpochTime();
 }
 
+/*
+ * mqttErrorCodeName:
+ * Legibly prints AruinoMqttClient library error enum values. 
+ */
 static String mqttErrorCodeName(int errorCode) 
 {
   String errorMessage;
@@ -442,6 +557,14 @@ static String mqttErrorCodeName(int errorCode)
   return errorMessage;
 }
 
+/**************************/
+/*    Logging functions   */
+/**************************/
+
+/*
+ * log:
+ * Prints the time, log level, and log message.
+ */
 static void log(LogLevel logLevel, String message) 
 {
   Serial.print(getFormattedDateTime(getTime()));
