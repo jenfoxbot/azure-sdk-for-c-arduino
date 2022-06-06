@@ -227,7 +227,7 @@ _NOTE: Device keys are used to automatically generate a SAS token for authentica
         If you perform this step right away after uploading the sketch, the serial monitor will show an output similar to the following upon success:
 
         ```text
-        1970-01-01T00:00:35 [INFO] Attempting to connect to WIFI SSID: Moyeeaee
+        1970-01-01T00:00:35 [INFO] Attempting to connect to WIFI SSID: <ssid>
         .
 
         1970-01-01T00:01:16 [INFO] WiFi connected, IP address: 2001774784, Strength (dBm): -27
