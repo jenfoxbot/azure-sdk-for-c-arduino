@@ -414,7 +414,7 @@ static void generateMQTTPassword()
   {
     logString = "Could not get the MQTT password. Return code: ";
     LogError(logString + result);
-    exit(rc);
+    exit(result);
   }
 }
 
