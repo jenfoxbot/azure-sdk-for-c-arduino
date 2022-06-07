@@ -493,7 +493,7 @@ static uint64_t getSASTokenExpirationTime(uint32_t minutes)
 
 /*
  * getTime:
- * NTP client returns the seconds corresponding to GMT epoch time.
+ * WiFi client returns the seconds corresponding to GMT epoch time.
  * This function used as a callback by the SSL library to validate the server certificate
  * and in SAS token generation.
  */
@@ -503,7 +503,7 @@ static unsigned long getTime()
 }
 
 /*
- * getFormattedTime:
+ * getFormattedDateTime:
  * Custom formatting for epoch seconds. Used in logging.
  */
 static String getFormattedDateTime(unsigned long epochTimeInSeconds) 
