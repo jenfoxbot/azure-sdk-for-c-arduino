@@ -8,7 +8,7 @@
 #include <cstring>
 #include <ctime>
 
-// Libraries for SSL client, MQTT client, NTP client, and WiFi connection.
+// Libraries for SSL client, MQTT client, and WiFi connection.
 #include <ArduinoBearSSL.h>
 #include <ArduinoMqttClient.h>
 #include <WiFiNINA.h>
