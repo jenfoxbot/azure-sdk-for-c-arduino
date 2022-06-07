@@ -39,7 +39,7 @@
 
 #define LED_PIN 2 // High on error. Briefly high for each successful send.
 
-// Time and Time Zone for NTP.
+// Time and Time Zone.
 #define GMT_OFFSET_SECS (IOT_CONFIG_TIME_ZONE * SECS_PER_HOUR)
 #define GMT_OFFSET_SECS_DST ((IOT_CONFIG_TIME_ZONE + IOT_CONFIG_TIME_ZONE_DAYLIGHT_SAVINGS_DIFF) * SECS_PER_HOUR)
 
@@ -98,8 +98,9 @@ static void generateSASBase64EncodedSignedSignature(
 static uint64_t getSASTokenExpirationTime(uint32_t minutes);
 
 // Time and Error functions.
-static String getFormattedDateTime(unsigned long epochTimeInSeconds);
 static unsigned long getTime();
+static unsigned long getLocalTime();
+static String getFormattedDateTime(unsigned long epochTimeInSeconds);
 static String mqttErrorCodeName(int errorCode);
 
 /*---------------------------*/
@@ -473,12 +474,12 @@ static void generateSASBase64EncodedSignedSignature(
  */
 static uint64_t getSASTokenExpirationTime(uint32_t minutes) 
 {
-  unsigned long now = getTime();
-  unsigned long expiryTime = now + (SECS_PER_MIN* minutes);
+  unsigned long now = getTime();  // GMT
+  unsigned long expiryTime = now + (SECS_PER_MIN * minutes); // For SAS Token
 
-  logString = "Current time: ";
+  logString = "UTC Current time: ";
   LogInfo(logString + getFormattedDateTime(now) + " (epoch: " + now + " secs)");
-  logString = "Expiry time: ";
+  logString = "UTC Expiry time: ";
   LogInfo(logString + getFormattedDateTime(expiryTime) + " (epoch: " + expiryTime + " secs)");
 
   return (uint64_t)expiryTime;
@@ -489,8 +490,29 @@ static uint64_t getSASTokenExpirationTime(uint32_t minutes)
 /**********************************/
 
 /*
- * getFormattedDateTime:
- * Provides legible time from provided value.
+ * getTime:
+ * NTP client returns the seconds corresponding to GMT epoch time.
+ * This function used as a callback by the SSL library to validate the server certificate
+ * and in SAS token generation.
+ */
+static unsigned long getTime()
+{
+  return ntpClient.getUTCEpochTime();
+}
+
+/*
+ * getLocalTime:
+ * NTP client returns the seconds corresponding to local time.
+ * Used in logging.
+ */
+static unsigned long getLocalTime()
+{
+  return ntpClient.getEpochTime();
+}
+
+/*
+ * getFormattedTime:
+ * Custom formatting for epoch seconds. Used in logging.
  */
 static String getFormattedDateTime(unsigned long epochTimeInSeconds) 
 {
@@ -499,19 +521,9 @@ static String getFormattedDateTime(unsigned long epochTimeInSeconds)
   time_t time = (time_t)epochTimeInSeconds;
   struct tm* timeInfo = localtime(&time);
 
-  strftime(buffer, 20, "%FT%T", timeInfo);
+  strftime(buffer, 20, "%F %T", timeInfo);
 
   return String(buffer);
-}
-
-/*
- * getTime:
- * NTP client returns the current time.
- * This function also used as a callback by the SSL library to validate the server certificate.
- */
-static unsigned long getTime()
-{
-    return ntpClient.getEpochTime();
 }
 
 /*
@@ -565,7 +577,7 @@ static String mqttErrorCodeName(int errorCode)
  */
 static void log(LogLevel logLevel, String message) 
 {
-  Serial.print(getFormattedDateTime(getTime()));
+  Serial.print(getFormattedDateTime(getLocalTime()));
 
   switch (logLevel) {
   case LogLevelDebug:
