@@ -11,8 +11,6 @@
 // Libraries for SSL client, MQTT client, NTP client, and WiFi connection.
 #include <ArduinoBearSSL.h>
 #include <ArduinoMqttClient.h>
-#include <NTPClient_Generic.h>
-#include <TimeLib.h>
 #include <WiFiNINA.h>
 
 // Libraries for SAS token generation.
@@ -40,8 +38,11 @@
 #define LED_PIN 2 // High on error. Briefly high for each successful send.
 
 // Time and Time Zone.
-#define GMT_OFFSET_SECS (IOT_CONFIG_TIME_ZONE * SECS_PER_HOUR)
-#define GMT_OFFSET_SECS_DST ((IOT_CONFIG_TIME_ZONE + IOT_CONFIG_TIME_ZONE_DAYLIGHT_SAVINGS_DIFF) * SECS_PER_HOUR)
+#define SECS_PER_MIN 60
+#define SECS_PER_HOUR (SECS_PER_MIN * 60)
+#define GMT_OFFSET_SECS (IOT_CONFIG_DAYLIGHT_SAVINGS ? \
+                        ((IOT_CONFIG_TIME_ZONE + IOT_CONFIG_TIME_ZONE_DAYLIGHT_SAVINGS_DIFF) * SECS_PER_HOUR) : \
+                        (IOT_CONFIG_TIME_ZONE * SECS_PER_HOUR))
 
 /*--- Logging ---*/
 enum LogLevel 
@@ -58,9 +59,7 @@ static void log(LogLevel logLevel, String message);
 #define LogError(message) log(LogLevelError, message)
 
 /*--- Sample static variables --*/
-// Clients for NTP, WiFi connection, SSL, MQTT, and Azure IoT SDK for C.
-static WiFiUDP wiFiUDPClient;
-static NTPClient ntpClient(wiFiUDPClient, "pool.ntp.org", GMT_OFFSET_SECS_DST);
+// Clients for WiFi connection, SSL, MQTT, and Azure IoT SDK for C.
 static WiFiClient wiFiClient;
 static BearSSLClient bearSSLClient(wiFiClient);
 static MqttClient mqttClient(bearSSLClient);
@@ -99,7 +98,6 @@ static uint64_t getSASTokenExpirationTime(uint32_t minutes);
 
 // Time and Error functions.
 static unsigned long getTime();
-static unsigned long getLocalTime();
 static String getFormattedDateTime(unsigned long epochTimeInSeconds);
 static String mqttErrorCodeName(int errorCode);
 
@@ -155,7 +153,6 @@ void loop()
 
   // MQTT loop must be called to process Telemetry and Cloud-to-Device (C2D) messages.
   mqttClient.poll();
-  ntpClient.update();
   delay(500);
 }
 
@@ -166,7 +163,7 @@ void loop()
 /*
  * connectToWifi:
  * The WiFi client connects, using the provided SSID and password.
- * The NTP client synchronizes the time on the device. 
+ * The WiFi client synchronizes the time on the device. 
  */
 void connectToWiFi() 
 {
@@ -184,8 +181,7 @@ void connectToWiFi()
   LogInfo(logString + WiFi.localIP() + ", Strength (dBm): " + WiFi.RSSI());
   LogInfo("Syncing time.");
 
-  ntpClient.begin();
-  while (!ntpClient.forceUpdate()) 
+  while (getTime() == 0) 
   {
     Serial.print(".");
     delay(500);
@@ -476,11 +472,17 @@ static uint64_t getSASTokenExpirationTime(uint32_t minutes)
 {
   unsigned long now = getTime();  // GMT
   unsigned long expiryTime = now + (SECS_PER_MIN * minutes); // For SAS Token
+  unsigned long localNow = now + GMT_OFFSET_SECS;
+  unsigned long localExpiryTime = expiryTime + GMT_OFFSET_SECS;
 
   logString = "UTC Current time: ";
   LogInfo(logString + getFormattedDateTime(now) + " (epoch: " + now + " secs)");
   logString = "UTC Expiry time: ";
   LogInfo(logString + getFormattedDateTime(expiryTime) + " (epoch: " + expiryTime + " secs)");
+  logString = "Local Current time: ";
+  LogInfo(logString + getFormattedDateTime(localNow));
+  logString = "Local Expiry time: ";
+  LogInfo(logString + getFormattedDateTime(localExpiryTime));
 
   return (uint64_t)expiryTime;
 }
@@ -497,17 +499,7 @@ static uint64_t getSASTokenExpirationTime(uint32_t minutes)
  */
 static unsigned long getTime()
 {
-  return ntpClient.getUTCEpochTime();
-}
-
-/*
- * getLocalTime:
- * NTP client returns the seconds corresponding to local time.
- * Used in logging.
- */
-static unsigned long getLocalTime()
-{
-  return ntpClient.getEpochTime();
+  return WiFi.getTime();
 }
 
 /*
@@ -577,7 +569,7 @@ static String mqttErrorCodeName(int errorCode)
  */
 static void log(LogLevel logLevel, String message) 
 {
-  Serial.print(getFormattedDateTime(getLocalTime()));
+  Serial.print(getFormattedDateTime(getTime() + GMT_OFFSET_SECS));
 
   switch (logLevel) {
   case LogLevelDebug:
