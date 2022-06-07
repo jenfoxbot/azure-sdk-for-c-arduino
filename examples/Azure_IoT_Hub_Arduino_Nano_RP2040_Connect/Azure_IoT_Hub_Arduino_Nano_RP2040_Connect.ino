@@ -8,13 +8,14 @@
 #include <cstring>
 #include <ctime>
 
-// Libraries for SSL client, MQTT client, and WiFi connection.
+// Libraries for SSL client, MQTT client, NTP client, and WiFi connection.
 #include <ArduinoBearSSL.h>
 #include <ArduinoMqttClient.h>
+#include <NTPClient_Generic.h>
+#include <TimeLib.h>
 #include <WiFiNINA.h>
 
 // Libraries for SAS token generation.
-#include <mbed.h>
 #include <mbedtls/base64.h>
 #include <mbedtls/md.h>
 #include <mbedtls/sha256.h>
@@ -37,7 +38,10 @@
 #define BUFFER_LENGTH_TIME 256
 
 #define LED_PIN 2 // High on error. Briefly high for each successful send.
-#define SECS_PER_MIN 60
+
+// Time and Time Zone for NTP.
+#define GMT_OFFSET_SECS (IOT_CONFIG_TIME_ZONE * SECS_PER_HOUR)
+#define GMT_OFFSET_SECS_DST ((IOT_CONFIG_TIME_ZONE + IOT_CONFIG_TIME_ZONE_DAYLIGHT_SAVINGS_DIFF) * SECS_PER_HOUR)
 
 /*--- Logging ---*/
 enum LogLevel 
@@ -54,7 +58,9 @@ static void log(LogLevel logLevel, String message);
 #define LogError(message) log(LogLevelError, message)
 
 /*--- Sample static variables --*/
-// Clients for WiFi connection, SSL, MQTT, and Azure IoT SDK for C.
+// Clients for NTP, WiFi connection, SSL, MQTT, and Azure IoT SDK for C.
+static WiFiUDP wiFiUDPClient;
+static NTPClient ntpClient(wiFiUDPClient, "pool.ntp.org", GMT_OFFSET_SECS_DST);
 static WiFiClient wiFiClient;
 static BearSSLClient bearSSLClient(wiFiClient);
 static MqttClient mqttClient(bearSSLClient);
@@ -148,6 +154,7 @@ void loop()
 
   // MQTT loop must be called to process Telemetry and Cloud-to-Device (C2D) messages.
   mqttClient.poll();
+  ntpClient.update();
   delay(500);
 }
 
@@ -158,7 +165,7 @@ void loop()
 /*
  * connectToWifi:
  * The WiFi client connects, using the provided SSID and password.
- * The WiFi client synchronizes the time on the device. 
+ * The NTP client synchronizes the time on the device. 
  */
 void connectToWiFi() 
 {
@@ -176,9 +183,10 @@ void connectToWiFi()
   LogInfo(logString + WiFi.localIP() + ", Strength (dBm): " + WiFi.RSSI());
   LogInfo("Syncing time.");
 
-  while (getTime() == 0) 
+  ntpClient.begin();
+  while (!ntpClient.forceUpdate()) 
   {
-    Serial.println(".");
+    Serial.print(".");
     delay(500);
   }
   Serial.println();
@@ -498,12 +506,12 @@ static String getFormattedDateTime(unsigned long epochTimeInSeconds)
 
 /*
  * getTime:
- * WiFi client returns the current time.
+ * NTP client returns the current time.
  * This function also used as a callback by the SSL library to validate the server certificate.
  */
 static unsigned long getTime()
 {
-    return WiFi.getTime();
+    return ntpClient.getEpochTime();
 }
 
 /*
